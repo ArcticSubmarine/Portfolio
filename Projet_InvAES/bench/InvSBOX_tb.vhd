@@ -1,0 +1,42 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+library AESLibrary;
+use AESLibrary.state_definition_package.all;
+library source;
+use source.all;
+
+entity InvSBOX_tb is
+end entity;
+
+architecture InvSBOX_tb_arch of InvSBOX_tb is
+	component InvSBOX
+		port (	InvSBOX_i : in bit8;
+			InvSBOX_o : out bit8);
+	end component;
+	
+	signal InvSBOX_si : bit8;
+	signal InvSBOX_so : bit8;
+
+	begin
+		DUT : InvSBox
+		port map (	InvSBox_i => InvSBox_si,
+				InvSBox_o => InvSBox_so);
+
+	
+	P0 : process
+	variable count_v : unsigned(7 downto 0) := "00000000";
+	begin
+		InvSBOX_si <= std_logic_vector(count_v);
+		wait for 10 ns;
+		if (count_v = "11111111") then
+			count_v := "00000000";
+		else
+			count_v := count_v + 1;
+		end if;
+		
+	end process P0;
+end architecture;
+
+-- vcom -work source .sources/InvSBOX.vhd
+-- vsim bench InvSBOX_tb.vhd

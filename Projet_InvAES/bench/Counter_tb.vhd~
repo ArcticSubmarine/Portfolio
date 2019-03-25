@@ -1,0 +1,59 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+library AESLibrary;
+use AESLibrary.state_definition_package.all;
+
+-- Fonctionnel
+
+entity Counter_tb is
+end entity Counter_tb;
+
+
+architecture Counter_tb_arch of Counter_tb is 
+	component Counter is 
+		port (	clock_i		:	in std_logic;		-- entrée horloge
+			enable_i	:	in std_logic;		-- signal enable compteur
+			resetb_i	:	in std_logic;		-- signal de reset
+			count_o		:	out bit4);		-- sortie du compteur
+	end component;
+
+	signal clock_s 	: std_logic;
+	signal enable_s : std_logic;
+	signal resetb_s	: std_logic;
+	signal count_s	: bit4;
+
+	begin 
+		DUT : Counter port map (
+			clock_i 	=> clock_s,
+			enable_i	=> enable_s,
+			resetb_i 	=> resetb_s,
+			count_o 	=> count_s);
+
+		P0 : process		--Simulation d'un signal d'horloge
+		begin
+			clock_s <= '0';
+			wait for 15 ns;
+			clock_s <= '1';
+			wait for 15 ns;
+		end process;
+	
+		P1 : process		-- Simulation d'un appui sur le bouton reset
+		begin 
+			resetb_s <= '1';
+			wait for 30 ns;
+			resetb_s <= '0';
+			wait;
+			
+		end process;
+
+		P2 : process		-- Simulation d'un passage de enable à non enable
+		begin 
+			enable_s <= '1';
+			wait for 120 ns;
+			enable_s <= '0';
+			wait;
+		end process;
+			
+end architecture Counter_tb_arch;

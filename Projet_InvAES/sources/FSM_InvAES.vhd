@@ -1,0 +1,115 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+library AESLibrary;
+use AESLibrary.state_definition_package.all;
+
+--On prend la convention que les signaux sint actifs/enable quand ils sont à 1.
+
+entity FSM_InvAES_Moore is 
+	port (clock_i			:	in std_logic;	--horloge
+	      resetb_i			: 	in std_logic;	--reset
+	      start_i			: 	in std_logic;	--signal de départ
+	      round_i			: 	in bit4;	--numéro de la clé courante
+	      done_o			: 	out std_logic;	--signal de fin
+	      enableCounter_o 		:	out std_logic;	--autorisation du compteur
+	      enableMixColumns_o	: 	out std_logic;	--autorisation InvMixColumns
+	      enableOutput_o		:  	out std_logic;	--autorisation du signal de sortie
+	      enableRoundComputing_o 	: 	out std_logic;	--autorisation exécution de l'algorithme
+	      getCipherText_o		: 	out std_logic; 	--autorisation d'acquisition du texte
+	      resetCounter_o		:	out std_logic);	--reset du compteur
+end entity FSM_InvAES_Moore;
+
+architecture FSM_InvAES_Moore_arch of FSM_InvAES_Moore is
+	type state is (initialisation, debut, boucle, fin);
+		
+	signal etat_actuel, etat_futur : state; 
+
+	begin
+		P0 : process (clock_i, resetb_i)	-- Le reset est actif quand le signal est à 1
+		begin 
+		  if resetb_i = '1' then 
+			etat_actuel <= initialisation;
+
+		  elsif clock_i'event and clock_i = '1' then 
+			etat_actuel <= etat_futur;
+	
+		  end if;
+		end process P0;
+
+		
+		P1 : process (etat_actuel, start_i, round_i) 
+		begin
+			case etat_actuel is
+				when initialisation =>
+					if start_i = '1' then etat_futur <= debut;
+					else 
+						etat_futur <= initialisation;
+					end if;
+	
+				when debut => 
+					if conv_integer(unsigned(round_i)) = 1 then
+						etat_futur <= boucle;
+					else 
+						etat_futur <= debut;
+					end if;
+
+			when boucle => 
+				if conv_integer(unsigned(round_i)) = 9 then 
+					etat_futur <= fin;
+				else 
+					etat_futur <= boucle;
+				end if;
+		
+			when fin =>
+				if start_i = '1' then
+					etat_futur <= fin;
+				else 
+					etat_futur <= initialisation;
+				end if;
+			end case;
+	 	end process P1;
+
+		P2 : process (etat_actuel)
+		begin 
+			case etat_actuel is
+				when initialisation => 
+		      			done_o 			<= '0';
+		      			enableCounter_o 	<= '1';	--Début du comptage des tours.
+		      			enableMixColumns_o 	<= '0';
+		      			enableOutput_o 		<= '0';
+		      			enableRoundComputing_o 	<= '0';
+		      			getCipherText_o 	<= '1';	--Acquisition du texte d'entrée.
+		      			resetCounter_o 		<= '0';	
+			
+				when debut => 
+		      			done_o 			<= '0';
+		      			enableCounter_o 	<= '1';
+		      			enableMixColumns_o 	<= '0';
+		      			enableOutput_o 		<= '0';
+		      			enableRoundComputing_o 	<= '1';	--Autorisation de l'exécution de l'algorithme InvAES.
+		      			getCipherText_o 	<= '0';
+		      			resetCounter_o 		<= '0';	
+
+				when boucle => 
+		      			done_o 			<= '0';
+		      			enableCounter_o 	<= '1';
+		      			enableMixColumns_o 	<= '1';	--Autorisation d'exécution de InvMixColumns.
+		      			enableOutput_o 		<= '0';
+		      			enableRoundComputing_o 	<= '1';
+		      			getCipherText_o 	<= '0';
+		      			resetCounter_o 		<= '0';
+
+				when fin => 
+		      			done_o 			<= '1'; --Signal de fin d'exécution.
+		      			enableCounter_o 	<= '0';	--Fin du comptage des tours.
+		      			enableMixColumns_o 	<= '0';
+		      			enableOutput_o 		<= '1';	--Autorise l'envoie du résultat de l'algorithme en sortie.
+		      			enableRoundComputing_o 	<= '1';
+		      			getCipherText_o 	<= '0';
+		      			resetCounter_o 		<= '1';	--Remise à 0 du compteur.
+			end case;
+		end process P2;
+					
+end architecture FSM_InvAES_Moore_arch;
